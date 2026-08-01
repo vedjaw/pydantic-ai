@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from functools import lru_cache
+from functools import cache
 from typing import Any
 
 from pydantic import TypeAdapter
@@ -13,14 +13,16 @@ from temporalio.contrib.pydantic import (
 from temporalio.converter import CompositePayloadConverter, DefaultPayloadConverter, JSONPlainPayloadConverter
 
 
-@lru_cache(maxsize=128)
+@cache
 def _type_adapter(type_hint: Any) -> TypeAdapter[Any]:
-    """Build an adapter once for each recently used type hint.
+    """Build an adapter once for each type hint.
 
     The cache is replay-safe: a `TypeAdapter` is a pure function of its type hint, so cache hits and
-    misses validate identically and cannot change workflow history. The 128-entry bound comfortably
-    covers the code-defined set of hints used by a worker while preventing accidental growth if an
-    application constructs hints dynamically.
+    misses validate identically and cannot change workflow history. The cache is unbounded because the
+    key space is the set of distinct payload type annotations in the worker's registered workflows and
+    activities — a static, code-defined set, not user-data-driven — and workers commonly exceed any
+    fixed bound (see https://github.com/pydantic/pydantic-ai/issues/7027), at which point an LRU with
+    cyclic access degrades to a 0% hit rate while still paying a full schema build per miss.
     """
     return TypeAdapter(type_hint)
 

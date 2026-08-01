@@ -5627,6 +5627,13 @@ async def test_pydantic_ai_payload_converter_accepts_unhashable_type_hint() -> N
     assert type_adapter.call_count == 2
 
 
+def test_pydantic_ai_payload_converter_adapter_cache_is_unbounded() -> None:
+    """The adapter memo must not evict: workers routinely register more than 128 distinct payload
+    type hints, and cyclic access over a working set larger than any LRU bound degrades to a 0% hit
+    rate (https://github.com/pydantic/pydantic-ai/issues/7027)."""
+    assert temporal_payload_converter._type_adapter.cache_info().maxsize is None  # pyright: ignore[reportPrivateUsage]
+
+
 @pytest.mark.parametrize(
     'value',
     [
